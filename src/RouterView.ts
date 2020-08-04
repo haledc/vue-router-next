@@ -38,10 +38,10 @@ export const RouterViewImpl = defineComponent({
   setup(props, { attrs, slots }) {
     __DEV__ && warnDeprecatedUsage()
 
-    const route = inject(routeLocationKey)!
+    const injectedRoute = inject(routeLocationKey)!
     const depth = inject(viewDepthKey, 0)
     const matchedRouteRef = computed(
-      () => (props.route || route).matched[depth]
+      () => (props.route || injectedRoute).matched[depth]
     )
 
     provide(viewDepthKey, depth + 1)
@@ -50,14 +50,14 @@ export const RouterViewImpl = defineComponent({
     const viewRef = ref<ComponentPublicInstance>()
 
     return () => {
+      const route = props.route || injectedRoute
       const matchedRoute = matchedRouteRef.value
-      if (!matchedRoute) {
-        return null
-      }
+      const ViewComponent = matchedRoute && matchedRoute.components[props.name]
 
-      const ViewComponent = matchedRoute.components[props.name]
       if (!ViewComponent) {
-        return null
+        return slots.default
+          ? slots.default({ Component: ViewComponent, route })
+          : null
       }
 
       // props from route configration
@@ -70,12 +70,12 @@ export const RouterViewImpl = defineComponent({
           : routePropsOption
         : null
 
-      // we nee the value at the time we render because when we unmount, we
+      // we need the value at the time we render because when we unmount, we
       // navigated to a different location so the value is different
       const currentName = props.name
       const onVnodeMounted = () => {
         matchedRoute.instances[currentName] = viewRef.value
-        matchedRoute.enterCallbacks.forEach(callback =>
+        ;(matchedRoute.enterCallbacks[currentName] || []).forEach(callback =>
           callback(viewRef.value!)
         )
       }
@@ -97,7 +97,7 @@ export const RouterViewImpl = defineComponent({
         // pass the vnode to the slot as a prop.
         // h and <component :is="..."> both accept vnodes
         slots.default
-          ? slots.default({ Component: component, route: matchedRoute })
+          ? slots.default({ Component: component, route })
           : component
       )
     }
@@ -125,7 +125,7 @@ function warnDeprecatedUsage() {
     warn(
       `<router-view> can no longer be used directly inside <transition> or <keep-alive>.\n` +
         `Use slot props instead:\n\n` +
-        `<router-view v-slot="{ Component }>\n` +
+        `<router-view v-slot="{ Component }">\n` +
         `  <${comp}>\n` +
         `    <component :is="Component" />\n` +
         `  </${comp}>\n` +

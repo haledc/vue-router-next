@@ -1,14 +1,13 @@
 # vue-router-next [![CircleCI](https://circleci.com/gh/vuejs/vue-router-next.svg?style=svg)](https://circleci.com/gh/vuejs/vue-router-next)
 
-## Status: Alpha
+## Status: Beta
 
-The current codebase has most of the existing features on Vue Router v3.x and is usable. It supports all the [merged RFCs](https://github.com/vuejs/rfcs/pulls?q=is%3Apr+is%3Amerged+label%3Arouter).
+- Most RFCs have been merged.
+- All [merged RFCs](https://github.com/vuejs/rfcs/pulls?q=is%3Apr+is%3Amerged+label%3A3.x+label%3Arouter) have been implemented.
+- Vue CLI now has experimental support via [vue-cli-plugin-vue-next](https://github.com/vuejs/vue-cli-plugin-vue-next).
+- Check the [playground](https://github.com/vuejs/vue-router-next/tree/master/playground) or [e2e tests](https://github.com/vuejs/vue-router-next/tree/master/e2e/modal) for a usage example.
 
-Since the library is still unstable **and because we want feedback** on bugs and missing features, **it will probably go through a few breaking changes**.
-
-Check the [playground](https://github.com/vuejs/vue-router-next/tree/master/playground) or [e2e tests](https://github.com/vuejs/vue-router-next/tree/master/e2e/modal) for a usage example.
-
-## Known issues
+## Know issues
 
 ### Breaking changes compared to vue-router@3.x
 
@@ -26,7 +25,7 @@ Check the [playground](https://github.com/vuejs/vue-router-next/tree/master/play
 
 - `base` option is now passed as the first argument to `createWebHistory` (and other histories)
 - Catch all routes (`/*`) must now be defined using a parameter with a custom regex: `/:catchAll(.*)`
-- `router.match` and `router.resolve` are merged together into `router.resolve` with a slightly different signature. Check it's typing through autocomplete or [Router's `resolve` method](https://github.com/vuejs/vue-router-next/blob/master/src/router.ts)
+- `router.match` and `router.resolve` are merged together into `router.resolve` with a slightly different signature. Check its typing through autocomplete or [Router's `resolve` method](https://github.com/vuejs/vue-router-next/blob/master/src/router.ts)
 - `router.getMatchedComponents` is now removed as they can be retrieved from `router.currentRoute.value.matched`:
   ```js
   router.currentRoute.value.matched.flatMap(record =>
@@ -52,6 +51,21 @@ Check the [playground](https://github.com/vuejs/vue-router-next/tree/master/play
   })
   ```
 - The object returned in `scrollBehavior` is now similar to [`ScrollToOptions`](https://developer.mozilla.org/en-US/docs/Web/API/ScrollToOptions): `x` is renamed to `left` and `y` is renamed to `top`.
+- `transition` and `keep-alive` must now be used **inside** of `RouterView` via the `v-slot` API:
+  ```vue
+  <router-view v-slot="{ Component }">
+    <transition>
+      <keep-alive>
+        <component :is="Component" />
+      </keep-alive>
+    </transition>
+  </router-view>
+  ```
+  See more on the [KeepAlive](https://github.com/vuejs/vue-router-next/blob/master/e2e/keep-alive/index.ts) and the [Transition](https://github.com/vuejs/vue-router-next/blob/master/e2e/transitions/index.ts) examples.
+- `parent` is removed from Route locations (`this.$route` and object returned by `router.resolve`). You can still access it via the `matched` array:
+  ```js
+  const parent = this.$route.matched[this.$route.matched.length -1]
+  ```
 
 ### Typings
 
@@ -113,6 +127,10 @@ These are technically breaking changes but they fix an inconsistent behavior.
   ]
   ```
   Note this will work if `path` was `/parent/` as the relative location `home` to `/parent/` is indeed `/parent/home` but the relative location of `home` to `/parent` is `/home`
+- Encoding is now more consistent. The initial navigation should yield the same results are in-app navigations.
+  - Values in `path`, `fullPath` are not decoded anymore. They will appear as provided by the browser (most browsers provide them encoded).
+  - `params`, `query` and `hash` are now all decoded
+  - When using `push`, `resolve` and `replace` and providing a `string` location or a `path` property in an object, **it must be encoded**. `params`, `query` and `hash` must be provided in its decoded version.
 
 ## Contributing
 

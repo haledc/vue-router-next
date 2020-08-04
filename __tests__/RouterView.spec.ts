@@ -29,7 +29,7 @@ const props = { default: false }
 const routes = createRoutes({
   root: {
     fullPath: '/',
-    name: undefined,
+    name: 'home',
     path: '/',
     query: {},
     params: {},
@@ -39,7 +39,7 @@ const routes = createRoutes({
       {
         components: { default: components.Home },
         instances: {},
-        enterCallbacks: [],
+        enterCallbacks: {},
         path: '/',
         props,
       },
@@ -57,7 +57,7 @@ const routes = createRoutes({
       {
         components: { default: components.Foo },
         instances: {},
-        enterCallbacks: [],
+        enterCallbacks: {},
         path: '/foo',
         props,
       },
@@ -75,14 +75,14 @@ const routes = createRoutes({
       {
         components: { default: components.Nested },
         instances: {},
-        enterCallbacks: [],
+        enterCallbacks: {},
         path: '/',
         props,
       },
       {
         components: { default: components.Foo },
         instances: {},
-        enterCallbacks: [],
+        enterCallbacks: {},
         path: 'a',
         props,
       },
@@ -100,21 +100,21 @@ const routes = createRoutes({
       {
         components: { default: components.Nested },
         instances: {},
-        enterCallbacks: [],
+        enterCallbacks: {},
         path: '/',
         props,
       },
       {
         components: { default: components.Nested },
         instances: {},
-        enterCallbacks: [],
+        enterCallbacks: {},
         path: 'a',
         props,
       },
       {
         components: { default: components.Foo },
         instances: {},
-        enterCallbacks: [],
+        enterCallbacks: {},
         path: 'b',
         props,
       },
@@ -132,7 +132,7 @@ const routes = createRoutes({
       {
         components: { foo: components.Foo },
         instances: {},
-        enterCallbacks: [],
+        enterCallbacks: {},
         path: '/',
         props,
       },
@@ -151,7 +151,7 @@ const routes = createRoutes({
         components: { default: components.User },
 
         instances: {},
-        enterCallbacks: [],
+        enterCallbacks: {},
         path: '/users/:id',
         props: { default: true },
       },
@@ -170,7 +170,7 @@ const routes = createRoutes({
         components: { default: components.WithProps },
 
         instances: {},
-        enterCallbacks: [],
+        enterCallbacks: {},
         path: '/props/:id',
         props: { default: { id: 'foo', other: 'fixed' } },
       },
@@ -190,7 +190,7 @@ const routes = createRoutes({
         components: { default: components.WithProps },
 
         instances: {},
-        enterCallbacks: [],
+        enterCallbacks: {},
         path: '/props/:id',
         props: {
           default: (to: RouteLocationNormalized) => ({
@@ -263,7 +263,7 @@ describe('RouterView', () => {
         {
           components: { default: components.User },
           instances: {},
-          enterCallbacks: [],
+          enterCallbacks: {},
           path: '/users/:id',
           props,
         },
@@ -330,6 +330,7 @@ describe('RouterView', () => {
       expect(wrapper.html()).toBe(`<div><div>Home</div></div>`)
       expect('can no longer be used directly inside').not.toHaveBeenWarned()
     })
+
     it('warns if KeepAlive wraps a RouterView', async () => {
       const route = createMockedRoute(routes.root)
       const wrapper = await mount(
@@ -390,6 +391,33 @@ describe('RouterView', () => {
       )
       expect(wrapper.html()).toBe(`<div>Home</div>`)
       expect('can no longer be used directly inside').toHaveBeenWarned()
+    })
+  })
+
+  describe('v-slot', () => {
+    async function factory(
+      initialRoute: RouteLocationNormalizedLoose,
+      propsData: any = {}
+    ) {
+      const route = createMockedRoute(initialRoute)
+      const wrapper = await mount(RouterView, {
+        propsData,
+        provide: route.provides,
+        components: { RouterView },
+        slots: {
+          default: `
+          <span>{{ route.name }}</span>
+          <component :is="Component"/>
+        `,
+        },
+      })
+
+      return { route, wrapper }
+    }
+
+    it('passes a Component and route', async () => {
+      const { wrapper } = await factory(routes.root)
+      expect(wrapper.html()).toBe(`<span>home</span><div>Home</div>`)
     })
   })
 

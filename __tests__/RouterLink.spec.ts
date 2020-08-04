@@ -99,6 +99,21 @@ const locations = createLocations({
       name: undefined,
     },
   },
+  singleStringParams: {
+    string: '/p/1',
+    normalized: {
+      fullPath: '/p/1',
+      href: '/p/1',
+      path: '/p/1',
+      params: { p: '1' },
+      meta: {},
+      query: {},
+      hash: '',
+      matched: [records.home],
+      redirectedFrom: undefined,
+      name: undefined,
+    },
+  },
   repeatedParams2: {
     string: '/p/1/2',
     normalized: {
@@ -106,6 +121,21 @@ const locations = createLocations({
       href: '/p/1/2',
       path: '/p/1/2',
       params: { p: ['1', '2'] },
+      meta: {},
+      query: {},
+      hash: '',
+      matched: [records.home],
+      redirectedFrom: undefined,
+      name: undefined,
+    },
+  },
+  anotherRepeatedParams2: {
+    string: '/p/1/3',
+    normalized: {
+      fullPath: '/p/1/3',
+      href: '/p/1/3',
+      path: '/p/1/3',
+      params: { p: ['1', '3'] },
       meta: {},
       query: {},
       hash: '',
@@ -362,15 +392,6 @@ describe('RouterLink', () => {
     expect(wrapper.find('a')!.getAttribute('href')).toBe('/home')
   })
 
-  it('displays a link with a string prop', async () => {
-    const { wrapper } = await factory(
-      START_LOCATION_NORMALIZED,
-      { to: locations.basic.string },
-      locations.basic.normalized
-    )
-    expect(wrapper.find('a')!.getAttribute('href')).toBe('/home')
-  })
-
   it('can change the value', async () => {
     const { wrapper, router } = await factory(
       START_LOCATION_NORMALIZED,
@@ -496,6 +517,24 @@ describe('RouterLink', () => {
       locations.notFound.normalized,
       { to: locations.basic.string },
       locations.basic.normalized
+    )
+    expect(wrapper.find('a')!.className).toBe('')
+  })
+
+  it('is not active with different params type', async () => {
+    const { wrapper } = await factory(
+      locations.repeatedParams2.normalized,
+      { to: locations.singleStringParams.string },
+      locations.singleStringParams.normalized
+    )
+    expect(wrapper.find('a')!.className).toBe('')
+  })
+
+  it('is not active with different repeated params', async () => {
+    const { wrapper } = await factory(
+      locations.repeatedParams2.normalized,
+      { to: locations.anotherRepeatedParams2.string },
+      locations.anotherRepeatedParams2.normalized
     )
     expect(wrapper.find('a')!.className).toBe('')
   })

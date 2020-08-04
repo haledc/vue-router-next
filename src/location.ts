@@ -5,6 +5,7 @@ import {
   RouteParamValue,
 } from './types'
 import { RouteRecord } from './matcher/types'
+import { warn } from './warning'
 
 /**
  * Location object returned by {@link `parseURL`}.
@@ -71,16 +72,8 @@ export function parseURL(
   }
 
   // no search and no query
-  path = path != null ? path : location
+  path = resolveRelativePath(path != null ? path : location, currentLocation)
   // empty path means a relative query or hash `?foo=f`, `#thing`
-  if (!path) {
-    path = currentLocation + path
-  } else if (path[0] !== '/') {
-    // relative to current location. Currently we only support simple relative
-    // but no `..`, `.`, or complex like `../.././..`. We will always leave the
-    // leading slash so we can safely append path
-    path = currentLocation.replace(/[^\/]*$/, '') + path
-  }
 
   return {
     fullPath: path + (searchString && '?') + searchString + hash,
@@ -186,11 +179,53 @@ function isSameRouteLocationParamsValue(
  * Check if two arrays are the same or if an array with one single entry is the
  * same as another primitive value. Used to check query and parameters
  *
- * @param a array of values
- * @param b array of values or a single value
+ * @param a - array of values
+ * @param b - array of values or a single value
  */
 function isEquivalentArray<T>(a: T[], b: T[] | T): boolean {
   return Array.isArray(b)
     ? a.length === b.length && a.every((value, i) => value === b[i])
     : a.length === 1 && a[0] === b
+}
+
+/**
+ * Resolves a relative path that starts with `.`.
+ *
+ * @param to - path location we are resolving
+ * @param from - currentLocation.path, should start with `/`
+ */
+export function resolveRelativePath(to: string, from: string): string {
+  if (to.startsWith('/')) return to
+  if (__DEV__ && !from.startsWith('/')) {
+    warn(
+      `Cannot resolve a relative location without an absolute path. Trying to resolve "${to}" from "${from}". It should look like "/${from}".`
+    )
+    return to
+  }
+
+  if (!to) return from
+
+  const fromSegments = from.split('/')
+  const toSegments = to.split('/')
+
+  let position = fromSegments.length - 1
+  let toPosition: number
+  let segment: string
+
+  for (toPosition = 0; toPosition < toSegments.length; toPosition++) {
+    segment = toSegments[toPosition]
+    // can't go below zero
+    if (position === 1 || segment === '.') continue
+    if (segment === '..') position--
+    // found something that is not relative path
+    else break
+  }
+
+  return (
+    fromSegments.slice(0, position).join('/') +
+    '/' +
+    toSegments
+      .slice(toPosition - (toPosition === toSegments.length ? 1 : 0))
+      .join('/')
+  )
 }

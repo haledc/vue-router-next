@@ -8,6 +8,7 @@ import { Router } from './router'
 export { createWebHistory } from './history/html5'
 export { createMemoryHistory } from './history/memory'
 export { createWebHashHistory } from './history/hash'
+export { createRouterMatcher } from './matcher'
 
 export {
   LocationQuery,
@@ -49,8 +50,11 @@ export {
   ScrollBehavior,
 } from './router'
 
-// waiting for RFC isNavigationFailure
-export { NavigationFailureType, NavigationFailure } from './errors'
+export {
+  NavigationFailureType,
+  NavigationFailure,
+  isNavigationFailure,
+} from './errors'
 
 export { onBeforeRouteLeave, onBeforeRouteUpdate } from './navigationGuards'
 export { RouterLink, useLink, RouterLinkProps } from './RouterLink'

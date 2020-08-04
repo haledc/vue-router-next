@@ -72,6 +72,7 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
+  { path: '/:pathMatch(.*)', component: components.Home, name: 'catch-all' },
 ]
 
 async function newRouter(
@@ -172,12 +173,6 @@ describe('Router', () => {
       fullPath: '/foo?bar=baz#hey',
       href: '#/foo?bar=baz#hey',
     })
-    history = createWebHashHistory('/with/#/base/')
-    ;({ router } = await newRouter({ history }))
-    expect(router.resolve('/foo?bar=baz#hey')).toMatchObject({
-      fullPath: '/foo?bar=baz#hey',
-      href: '#/base/foo?bar=baz#hey',
-    })
   })
 
   it('can await router.go', async () => {
@@ -222,7 +217,7 @@ describe('Router', () => {
   })
 
   it('navigates if the location does not exist', async () => {
-    const { router } = await newRouter()
+    const { router } = await newRouter({ routes: [routes[0]] })
     const spy = jest.fn((to, from, next) => next())
     router.beforeEach(spy)
     await router.push('/idontexist')
@@ -337,6 +332,26 @@ describe('Router', () => {
     })
   })
 
+  it('resolves relative locations', async () => {
+    const { router } = await newRouter()
+    await router.push('/users/posva')
+    await router.push('add')
+    expect(router.currentRoute.value.path).toBe('/users/add')
+    await router.push('/users/posva')
+    await router.push('./add')
+    expect(router.currentRoute.value.path).toBe('/users/add')
+  })
+
+  it('resolves parent relative locations', async () => {
+    const { router } = await newRouter()
+    await router.push('/users/posva')
+    await router.push('../add')
+    expect(router.currentRoute.value.path).toBe('/add')
+    await router.push('/users/posva')
+    await router.push('../../../add')
+    expect(router.currentRoute.value.path).toBe('/add')
+  })
+
   describe('Warnings', () => {
     it.skip('avoid infinite redirection loops', async () => {
       const history = createMemoryHistory()
@@ -354,7 +369,17 @@ describe('Router', () => {
 
     it.todo('avoid infinite redirection loops when doing router.back()')
 
-    it.todo('warns if `next` is called twice')
+    it('warns if `next` is called twice', async () => {
+      const { router } = await newRouter()
+      router.beforeEach((to, from, next) => {
+        next()
+        next()
+      })
+      await router.push('/foo')
+      expect(
+        'It should be called exactly one time in each navigation guard'
+      ).toHaveBeenWarned()
+    })
   })
 
   describe('alias', () => {
@@ -664,6 +689,26 @@ describe('Router', () => {
       expect(loc.redirectedFrom).toMatchObject({
         name: 'parent',
         path: '/parent',
+      })
+    })
+
+    // https://github.com/vuejs/vue-router-next/issues/404
+    it('works with named routes', async () => {
+      const history = createMemoryHistory()
+      const router = createRouter({
+        history,
+        routes: [
+          { name: 'foo', path: '/foo', redirect: '/bar' },
+          { path: '/bar', component: components.Bar },
+        ],
+      })
+      await expect(router.push('/foo')).resolves.toEqual(undefined)
+      const loc = router.currentRoute.value
+      expect(loc.name).toBe(undefined)
+      expect(loc.path).toBe('/bar')
+      expect(loc.redirectedFrom).toMatchObject({
+        name: 'foo',
+        path: '/foo',
       })
     })
   })

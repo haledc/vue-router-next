@@ -17,7 +17,7 @@ import {
   NavigationFailure,
   NavigationRedirectError,
 } from './errors'
-import { ComponentPublicInstance, ComponentOptions } from 'vue'
+import { ComponentOptions } from 'vue'
 import { inject, getCurrentInstance, warn } from 'vue'
 import { matchedRouteKey } from './injectionSymbols'
 import { RouteRecordNormalized } from './matcher/types'
@@ -90,12 +90,28 @@ export function onBeforeRouteUpdate(updateGuard: NavigationGuard) {
 export function guardToPromiseFn(
   guard: NavigationGuard,
   to: RouteLocationNormalized,
+  from: RouteLocationNormalizedLoaded
+): () => Promise<void>
+export function guardToPromiseFn(
+  guard: NavigationGuard,
+  to: RouteLocationNormalized,
   from: RouteLocationNormalizedLoaded,
-  instance?: ComponentPublicInstance | undefined | null,
-  record?: RouteRecordNormalized
+  record: RouteRecordNormalized,
+  name: string
+): () => Promise<void>
+export function guardToPromiseFn(
+  guard: NavigationGuard,
+  to: RouteLocationNormalized,
+  from: RouteLocationNormalizedLoaded,
+  record?: RouteRecordNormalized,
+  name?: string
 ): () => Promise<void> {
   // keep a reference to the enterCallbackArray to prevent pushing callbacks if a new navigation took place
-  const enterCallbackArray = record && record.enterCallbacks
+  const enterCallbackArray =
+    record &&
+    // name is defined if record is because of the function overload
+    (record.enterCallbacks[name!] = record.enterCallbacks[name!] || [])
+
   return () =>
     new Promise((resolve, reject) => {
       const next: NavigationGuardNext = (
@@ -125,8 +141,9 @@ export function guardToPromiseFn(
           )
         } else {
           if (
-            record &&
-            record.enterCallbacks === enterCallbackArray &&
+            enterCallbackArray &&
+            // since enterCallbackArray is truthy, both record and name also are
+            record!.enterCallbacks[name!] === enterCallbackArray &&
             typeof valid === 'function'
           )
             enterCallbackArray.push(valid)
@@ -135,14 +152,31 @@ export function guardToPromiseFn(
       }
 
       // wrapping with Promise.resolve allows it to work with both async and sync guards
-      Promise.resolve(
+      let guardCall = Promise.resolve(
         guard.call(
-          instance,
+          record && record.instances[name!],
           to,
           from,
+          // TODO: could wrap in dev to check if the guard returns before
+          // calling next with 3 or more arguments. This would help people
+          // forgetting to remove the `next` argument
           __DEV__ ? canOnlyBeCalledOnce(next, to, from) : next
         )
-      ).catch(err => reject(err))
+      )
+
+      if (guard.length < 3) guardCall = guardCall.then(next)
+      if (__DEV__ && guard.length > 2)
+        guardCall = guardCall.then(() => {
+          // @ts-ignore: _called is added at canOnlyBeCalledOnce
+          if (!next._called)
+            warn(
+              `The "next" callback was never called inside of ${
+                guard.name ? '"' + guard.name + '"' : ''
+              }:\n${guard.toString()}\n. If you are returning a value instead of calling "next", make sure to remove the "next" parameter from your function.`
+            )
+          return Promise.reject(new Error('Invalid navigation guard'))
+        })
+      guardCall.catch(err => reject(err))
     })
 }
 
@@ -157,6 +191,8 @@ function canOnlyBeCalledOnce(
       warn(
         `The "next" callback was called more than once in one navigation guard when going from "${from.fullPath}" to "${to.fullPath}". It should be called exactly one time in each navigation guard. This will fail in production.`
       )
+    // @ts-ignore: we put it in the original one because it's easier to check
+    next._called = true
     if (called === 1) next.apply(null, arguments as any)
   }
 }
@@ -183,15 +219,15 @@ export function extractComponentsGuards(
         rawComponent = () => promise
       }
 
+      // skip update and leave guards if the route component is not mounted
+      if (guardType !== 'beforeRouteEnter' && !record.instances[name]) continue
+
       if (isRouteComponent(rawComponent)) {
         // __vccOpts is added by vue-class-component and contain the regular options
         let options: ComponentOptions =
           (rawComponent as any).__vccOpts || rawComponent
         const guard = options[guardType]
-        guard &&
-          guards.push(
-            guardToPromiseFn(guard, to, from, record.instances[name], record)
-          )
+        guard && guards.push(guardToPromiseFn(guard, to, from, record, name))
       } else {
         // start requesting the chunk already
         let componentPromise: Promise<RouteComponent | null> = (rawComponent as Lazy<
@@ -222,16 +258,7 @@ export function extractComponentsGuards(
             record.components[name] = resolvedComponent
             // @ts-ignore: the options types are not propagated to Component
             const guard: NavigationGuard = resolvedComponent[guardType]
-            return (
-              guard &&
-              guardToPromiseFn(
-                guard,
-                to,
-                from,
-                record.instances[name],
-                record
-              )()
-            )
+            return guard && guardToPromiseFn(guard, to, from, record, name)()
           })
         )
       }

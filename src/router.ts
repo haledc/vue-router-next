@@ -427,13 +427,11 @@ export function createRouter(options: RouterOptions): Router {
       }
       return pushWithRedirect(
         assign(
-          {},
-          // having a path here would be a problem with relative locations but
-          // at the same time it doesn't make sense for a redirect to be
-          // relative (no name, no path) because it would create an infinite
-          // loop. Since newTargetLocation must either have a `path` or a
-          // `name`, this will never happen
-          targetLocation,
+          {
+            query: targetLocation.query,
+            hash: targetLocation.hash,
+            params: targetLocation.params,
+          },
           newTargetLocation,
           {
             state: data,
@@ -625,7 +623,7 @@ export function createRouter(options: RouterOptions): Router {
           // NOTE: at this point to.matched is normalized and does not contain any () => Promise<Component>
 
           // clear existing enterCallbacks, these are added by extractComponentsGuards
-          to.matched.forEach(record => (record.enterCallbacks = []))
+          to.matched.forEach(record => (record.enterCallbacks = {}))
 
           // check in-component beforeRouteEnter
           guards = extractComponentsGuards(
@@ -691,8 +689,10 @@ export function createRouter(options: RouterOptions): Router {
     for (const record of leavingRecords) {
       // remove registered guards from removed matched records
       record.leaveGuards = []
+      record.updateGuards = []
       // free the references
       record.instances = {}
+      record.enterCallbacks = {}
     }
 
     // only consider as push if it's not the first navigation
@@ -983,15 +983,19 @@ function extractChangingRecords(
   const updatingRecords: RouteRecordNormalized[] = []
   const enteringRecords: RouteRecordNormalized[] = []
 
-  // TODO: could be optimized with one single for loop
-  for (const record of from.matched) {
-    if (to.matched.indexOf(record) < 0) leavingRecords.push(record)
-    else updatingRecords.push(record)
-  }
-
-  for (const record of to.matched) {
-    // the type doesn't matter because we are comparing per reference
-    if (from.matched.indexOf(record as any) < 0) enteringRecords.push(record)
+  const len = Math.max(from.matched.length, to.matched.length)
+  for (let i = 0; i < len; i++) {
+    const recordFrom = from.matched[i]
+    if (recordFrom) {
+      if (to.matched.indexOf(recordFrom) < 0) leavingRecords.push(recordFrom)
+      else updatingRecords.push(recordFrom)
+    }
+    const recordTo = to.matched[i]
+    if (recordTo) {
+      // the type doesn't matter because we are comparing per reference
+      if (from.matched.indexOf(recordTo as any) < 0)
+        enteringRecords.push(recordTo)
+    }
   }
 
   return [leavingRecords, updatingRecords, enteringRecords]

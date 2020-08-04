@@ -11,6 +11,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]
 then
   echo "Releasing v$VERSION ..."
 
+  # clear existing ts cache
+  rm -rf node_modules/.rts2_cache
   yarn run build
   yarn run build:dts
 
@@ -19,6 +21,7 @@ then
 
   # changelog
   yarn run changelog
+  yarn prettier --write CHANGELOG.md
   echo "Please check the git history and the changelog and press enter"
   read OKAY
 
