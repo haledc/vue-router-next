@@ -1,20 +1,19 @@
 {
   "name": "vue-router",
-  "version": "4.0.0-beta.5",
+  "version": "4.0.0-beta.6",
   "main": "dist/vue-router.cjs.js",
   "browser": "dist/vue-router.esm.js",
   "unpkg": "dist/vue-router.global.js",
   "jsdelivr": "dist/vue-router.global.js",
   "module": "dist/vue-router.esm-bundler.js",
   "types": "dist/vue-router.d.ts",
-  "tsd": {
-    "directory": "test-dts"
-  },
   "sideEffects": false,
   "license": "MIT",
   "files": [
     "dist/*.js",
     "dist/vue-router.d.ts",
+    "vetur/tags.json",
+    "vetur/attributes.json",
     "README.md"
   ],
   "scripts": {
@@ -30,7 +29,7 @@
     "lint": "prettier -c --parser typescript \"{src,__tests__,e2e}/**/*.[jt]s?(x)\"",
     "lint:fix": "yarn run lint --write",
     "test:types": "tsc --build tsconfig.json",
-    "test:tsd": "tsd",
+    "test:dts": "tsc -p ./test-dts/tsconfig.json",
     "test:unit": "jest --coverage",
     "test": "yarn run test:types && yarn run test:unit && yarn run build && yarn run build:dts && yarn run test:e2e",
     "test:e2e": "yarn run test:e2e:headless && yarn run test:e2e:native",
@@ -59,7 +58,11 @@
     }
   ],
   "peerDependencies": {
-    "vue": "^3.0.0-beta.20"
+    "vue": "^3.0.0-rc.5"
+  },
+  "vetur": {
+    "tags": "vetur/tags.json",
+    "attributes": "vetur/attributes.json"
   },
   "devDependencies": {
     "@microsoft/api-documenter": "^7.8.21",
@@ -73,15 +76,15 @@
     "@types/jsdom": "^16.2.3",
     "@types/webpack": "^4.41.21",
     "@types/webpack-env": "^1.15.2",
-    "@vue/compiler-sfc": "3.0.0-rc.2",
-    "@vue/server-renderer": "^3.0.0-rc.2",
+    "@vue/compiler-sfc": "3.0.0-rc.5",
+    "@vue/server-renderer": "^3.0.0-rc.5",
     "axios": "^0.19.2",
     "browserstack-local": "^1.4.5",
     "chalk": "^4.1.0",
-    "chromedriver": "^83.0.1",
+    "chromedriver": "^84.0.1",
     "codecov": "^3.7.2",
     "conventional-changelog-cli": "^2.0.34",
-    "css-loader": "^3.6.0",
+    "css-loader": "^4.2.0",
     "dotenv": "^8.2.0",
     "faked-promise": "^2.2.2",
     "html-webpack-plugin": "^4.3.0",
@@ -101,9 +104,8 @@
     "ts-jest": "^26.1.4",
     "ts-loader": "^8.0.2",
     "ts-node": "^8.10.2",
-    "tsd": "^0.11.0",
     "typescript": "^3.9.7",
-    "vue": "^3.0.0-beta.20",
+    "vue": "^3.0.0-rc.5",
     "vue-loader": "^16.0.0-beta.4",
     "webpack": "^4.44.1",
     "webpack-bundle-analyzer": "^3.8.0",

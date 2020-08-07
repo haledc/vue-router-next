@@ -352,36 +352,6 @@ describe('Router', () => {
     expect(router.currentRoute.value.path).toBe('/add')
   })
 
-  describe('Warnings', () => {
-    it.skip('avoid infinite redirection loops', async () => {
-      const history = createMemoryHistory()
-      let calls = 0
-      const beforeEnter = jest.fn((to, from, next) => {
-        if (++calls > 1000) throw new Error('1000 calls')
-        next(to.path)
-      })
-      const { router } = await newRouter({
-        history,
-        routes: [{ path: '/foo', component: components.Home, beforeEnter }],
-      })
-      await expect(router.push('/foo')).resolves.toBe(undefined)
-    })
-
-    it.todo('avoid infinite redirection loops when doing router.back()')
-
-    it('warns if `next` is called twice', async () => {
-      const { router } = await newRouter()
-      router.beforeEach((to, from, next) => {
-        next()
-        next()
-      })
-      await router.push('/foo')
-      expect(
-        'It should be called exactly one time in each navigation guard'
-      ).toHaveBeenWarned()
-    })
-  })
-
   describe('alias', () => {
     it('does not navigate to alias if already on original record', async () => {
       const { router } = await newRouter()
@@ -763,7 +733,7 @@ describe('Router', () => {
 
   describe('Dynamic Routing', () => {
     it('resolves new added routes', async () => {
-      const { router } = await newRouter()
+      const { router } = await newRouter({ routes: [] })
       expect(router.resolve('/new-route')).toMatchObject({
         name: undefined,
         matched: [],
@@ -793,7 +763,7 @@ describe('Router', () => {
     })
 
     it('can redirect to children in the middle of navigation', async () => {
-      const { router } = await newRouter()
+      const { router } = await newRouter({ routes: [] })
       expect(router.resolve('/new-route')).toMatchObject({
         name: undefined,
         matched: [],
@@ -849,7 +819,7 @@ describe('Router', () => {
     })
 
     it('can reroute to child', async () => {
-      const { router } = await newRouter()
+      const { router } = await newRouter({ routes: [] })
       router.addRoute({
         path: '/new',
         component: components.Foo,
@@ -890,7 +860,9 @@ describe('Router', () => {
     })
 
     it('stops resolving removed routes', async () => {
-      const { router } = await newRouter()
+      const { router } = await newRouter({
+        routes: [routes.find(route => route.name === 'Foo')!],
+      })
       // regular route
       router.removeRoute('Foo')
       expect(router.resolve('/foo')).toMatchObject({
